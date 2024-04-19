@@ -1,0 +1,67 @@
+Trading bot
+
+Focus on ethereum
+Trend trade
+Coinranking api
+binance library for historical data
+
+OBV (on balance volume): 
+    check if it is a new day with datetime
+    If it is a new day or new boot:
+        request past 3 days of trading volume + closing value
+        calculate OBV for past 3 days:
+                                {volume, if closing cur > closing prev
+            OBVcur = OBVprev +  {0, if closing cur = closing prev
+                                {-volume, if closing cur < closing prev
+        keep in variables d1, d2, d3
+        use numpy.polyfit function to calculate slope of OBV line of best fit
+        store slope in OBVS variable
+
+Accumulation / distribution line:
+    MFM (money flow multiplier) = [(C - L) - (H - C)] / (H - L)
+    MFV (money flow volume) = Volume for the specific period * MFM
+    request 3x:
+        C = closing price
+        L = lowest price
+        H = highest price
+    calculate 3 MFVs and store in mfv1, mfv2, mfv3
+    use numpy.polyfit function to calculate slope of MFV line of best fit
+    store slope in ADLS variable
+
+If both OBVS and ADLS are positive: bullish strategy
+If both OBVS and ADLS are negative: bearish strategy
+If ADLS is positive and OBVS is negative: bullish divergence
+If OBVS is positive and ADLS is negative: bearish divergence
+
+// numpy.polyfit note: don't forget to use arrays as the arguments in the function
+
+ADX (average directional index):
+    use talib to calculate values
+    // example code by Copilot
+    import talib as tb
+    import pandas as pd
+
+    # Assume you have daily data (Open, High, Low, Close, Volume)
+    def calculate_adx(daily_data):
+        h = daily_data['High'].values
+        l = daily_data['Low'].values
+        c = daily_data['Close'].values
+
+        # Calculate ADX with a time period of 14 days
+        adx_values = tb.ADX(h, l, c, timeperiod=14)
+
+        return adx_values
+
+    # Example usage:
+    historical_data = pd.read_csv('your_data.csv')  # Load your historical data
+    adx_results = calculate_adx(historical_data)
+
+    if adx_results is below 25: there is weak or no trend
+    if adx_results is between 25 to 50: not only is there a trend, but also a confirmation
+    if adx_results is above 50: there is a strong trend
+
+MACD (moving average convergance divergance):
+    MACD = 12-period EMA - 26-period EMA
+    Signal Line = A 9-period EMA of the MACD
+
+RSI
