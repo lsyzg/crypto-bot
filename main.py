@@ -20,10 +20,11 @@ def obv_calc(dataframe, period: int):
     obv = 0
     day = 6
     obvs = []
-    obvys = [1,2,3,4,5,6]
+    obvys = []
     dates = []
 
     for i in range(period):
+        obvys.append(i)
         dates.append(str(tdate - timedelta(days = i + 1)))
 
     for _ in range(period - 1):
@@ -52,11 +53,12 @@ def adl_calc(dataframe, period: int):
     vc = vccolumns.iloc[-abs(period):]
 
     mfv = []
-    adlys = [1,2,3,4,5,6]
+    adlys = []
     dates = []
     day = 0
 
     for i in range(period):
+        adlys.append(i)
         dates.append(str(tdate - timedelta(days = i + 1)))
 
     for _ in range(period - 1):
