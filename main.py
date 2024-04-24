@@ -11,21 +11,19 @@ pd.options.mode.chained_assignment = None
 data = yf.download("ETH-USD", start="2017-11-09", end=datetime.now())
 df = data.dropna()
 
-tdate = date.today()
-
 def obv_calc(dataframe, period: int):
     vccolumns = dataframe[["Close", "Volume"]]
     vc = vccolumns.iloc[-abs(period):]
 
     obv = 0
-    day = 6
+    day = period - 2
     obvs = []
     obvys = []
     dates = []
 
-    for i in range(period):
+    for i in range(period - 1):
         obvys.append(i)
-        dates.append(str(tdate - timedelta(days = i + 1)))
+        dates.append(str(date.today() - timedelta(days = i + 1)))
 
     for _ in range(period - 1):
         volume = vc.at[dates[day-1], "Volume"]  
@@ -48,6 +46,8 @@ def obv_calc(dataframe, period: int):
     slope, intercept = np.polyfit(obvs, obvys, 1)
     return slope
 
+
+
 def adl_calc(dataframe, period: int):
     vccolumns = dataframe[["High", "Low", "Close", "Volume"]]
     vc = vccolumns.iloc[-abs(period):]
@@ -55,11 +55,11 @@ def adl_calc(dataframe, period: int):
     mfv = []
     adlys = []
     dates = []
-    day = 0
+    day = period - 2
 
-    for i in range(period):
+    for i in range(period - 1):
         adlys.append(i)
-        dates.append(str(tdate - timedelta(days = i + 1)))
+        dates.append(str(date.today() - timedelta(days = i + 1)))
 
     for _ in range(period - 1):
         high = vc.at[dates[day-1], "High"]  
@@ -73,7 +73,7 @@ def adl_calc(dataframe, period: int):
     slope, intercept = np.polyfit(mfv, adlys, 1)
     return slope
 
-def adx_calc(dataframe, period: int):
+def adx_calc(dataframe, period: int): #period usually = 14
     vccolumns = dataframe[["High", "Low", "Close"]]
     df = vccolumns.iloc[-abs(period + 1):]
 
@@ -144,17 +144,21 @@ def macd_calc(dataframe, num_macds: int):
         macd = ema_calc(temp_df, period=12, period_num=1, column_name="Close") - ema_calc(temp_df, period=26, period_num=1, column_name="Close")
         macd_list.append(macd)
 
+    macd_gen_val = sum(macd_list) / len(macd_list)
+
     macd_df = pd.DataFrame(macd_list, columns=['MACD_values'])
     period_num = int(len(macd_df) / 9)
     signal_line_vals = ema_calc(macd_df, period=9, period_num=period_num, column_name="MACD_values")
 
     if macd_list[-1] > signal_line_vals[-1] and macd_list[-2] < signal_line_vals[-2]:
-        return "bearish"
+        return "bearish", macd_gen_val
     elif macd_list[-1] < signal_line_vals[-1] and macd_list[-2] > signal_line_vals[-2]:
-        return "bullish"
+        return "bullish", macd_gen_val
     else:
-        return "no crosses"
+        return "neutral", macd_gen_val
     
+print(macd_calc(df, num_macds=18))
+
 def rsi_calc(dataframe, period=int):
     vccolumns = dataframe[["Close"]]
     df = vccolumns.iloc[-abs(period):]
@@ -180,3 +184,8 @@ def rsi_calc(dataframe, period=int):
     rs = avg_gain / avg_loss
     rsi = 100 - (100 / (1 + rs))
     return rsi
+
+def stoch_oscillator_calc(dataframe, period: int):
+    vccolumns = dataframe[["Close"]]
+    df = vccolumns.iloc[-abs(period):]
+
