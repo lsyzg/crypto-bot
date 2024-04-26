@@ -11,7 +11,35 @@ pd.options.mode.chained_assignment = None
 data = yf.download("ETH-USD", start="2017-11-09", end=datetime.now())
 df = data.dropna()
 
+def ema_calc(dataframe, period: int, period_num: int, column_name: str):
+    vccolumns = dataframe[[column_name]]
+    df = vccolumns.iloc[-abs(period * period_num):]
+
+    ema_list = []
+
+    for i in range(period_num):
+        temp_df = df.iloc[i * period:(i + 1) * period]
+        sma = temp_df[column_name].mean()
+        multiplier = 2 / (period + 1)
+        ema = sma
+        for value in temp_df[column_name][1:]:
+            ema = (value - ema) * multiplier + ema
+        ema_list.append(ema)
+    if period_num == 1:
+        return ema_list[0]
+    else:
+        return ema_list
+
+def signal_line_crossover(list: list, signal_line_vals: list, interpreter_val: int):
+    if list[-1] > signal_line_vals[-1] and list[-2] < signal_line_vals[-2]:
+        return "bearish", interpreter_val
+    elif list[-1] < signal_line_vals[-1] and list[-2] > signal_line_vals[-2]:
+        return "bullish", interpreter_val
+    else:
+        return "None", interpreter_val
+
 def obv_calc(dataframe, period: int):
+    # no standard period
     vccolumns = dataframe[["Close", "Volume"]]
     vc = vccolumns.iloc[-abs(period):]
 
@@ -49,6 +77,7 @@ def obv_calc(dataframe, period: int):
 
 
 def adl_calc(dataframe, period: int):
+    # standard period 14
     vccolumns = dataframe[["High", "Low", "Close", "Volume"]]
     vc = vccolumns.iloc[-abs(period):]
 
@@ -73,7 +102,8 @@ def adl_calc(dataframe, period: int):
     slope, intercept = np.polyfit(mfv, adlys, 1)
     return slope
 
-def adx_calc(dataframe, period: int): #period usually = 14
+def adx_calc(dataframe, period: int): 
+    #standard period 14
     vccolumns = dataframe[["High", "Low", "Close"]]
     df = vccolumns.iloc[-abs(period + 1):]
 
@@ -113,25 +143,6 @@ def adx_calc(dataframe, period: int): #period usually = 14
     adx = adx_df.iat[-1,0]
     return adx
 
-def ema_calc(dataframe, period: int, period_num: int, column_name: str):
-    vccolumns = dataframe[[column_name]]
-    df = vccolumns.iloc[-abs(period * period_num):]
-
-    ema_list = []
-
-    for i in range(period_num):
-        temp_df = df.iloc[i * period:(i + 1) * period]
-        sma = temp_df[column_name].mean()
-        multiplier = 2 / (period + 1)
-        ema = sma
-        for value in temp_df[column_name][1:]:
-            ema = (value - ema) * multiplier + ema
-        ema_list.append(ema)
-    if period_num == 1:
-        return ema_list[0]
-    else:
-        return ema_list
-
 def macd_calc(dataframe, num_macds: int):
     # num_macds should be a multiple of 9 and a minimum of 18 to ensure that a signal line can be calculated
     vccolumns = dataframe[["Close"]]
@@ -150,16 +161,10 @@ def macd_calc(dataframe, num_macds: int):
     period_num = int(len(macd_df) / 9)
     signal_line_vals = ema_calc(macd_df, period=9, period_num=period_num, column_name="MACD_values")
 
-    if macd_list[-1] > signal_line_vals[-1] and macd_list[-2] < signal_line_vals[-2]:
-        return "bearish", macd_gen_val
-    elif macd_list[-1] < signal_line_vals[-1] and macd_list[-2] > signal_line_vals[-2]:
-        return "bullish", macd_gen_val
-    else:
-        return "neutral", macd_gen_val
-    
-print(macd_calc(df, num_macds=18))
+    return signal_line_crossover(list=macd_list, signal_line_vals=signal_line_vals, interpreter_val=macd_gen_val)
 
 def rsi_calc(dataframe, period=int):
+    # standard period 14
     vccolumns = dataframe[["Close"]]
     df = vccolumns.iloc[-abs(period):]
 
@@ -185,7 +190,26 @@ def rsi_calc(dataframe, period=int):
     rsi = 100 - (100 / (1 + rs))
     return rsi
 
-def stoch_oscillator_calc(dataframe, period: int):
-    vccolumns = dataframe[["Close"]]
-    df = vccolumns.iloc[-abs(period):]
+def stoch_oscillator_calc(dataframe, period: int, period_num: int):
+    # period_num should be a multiple of 3 and more than or equal to 6 for the sake of SMA calculation
+    # standard period 14
+    vccolumns = dataframe[["Close", "Low", "High"]]
+    df = vccolumns.iloc[-abs(period * period_num):]
 
+    k_list = []
+    d_list = []
+    for i in range(period_num):
+        temp_df = df.iloc[i * period:(i + 1) * period]
+        lowest_low = temp_df["Low"].min(axis=0)
+        highest_high = temp_df["High"].max(axis=0)
+        closingcur = temp_df["Close"].iloc[-1]
+
+        k = (closingcur - lowest_low) / (highest_high - lowest_low) * 100
+        k_list.append(k)
+
+    for j in range(int(period_num / 3)):
+        d = np.mean(k_list[j * 3: (j + 1) * 3])
+        d_list.append(d)
+
+    return signal_line_crossover(list=k_list, signal_line_vals=d_list, interpreter_val=k)
+    

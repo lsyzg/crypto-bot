@@ -1,10 +1,3 @@
-import requests, json
-import numpy as np
-import yfinance as yf
-import pandas as pd
-from datetime import date
-from datetime import timedelta
-from datetime import datetime
 from indicator_functions import *
 
 pd.options.mode.chained_assignment = None
@@ -12,49 +5,66 @@ pd.options.mode.chained_assignment = None
 data = yf.download("ETH-USD", start="2017-11-09", end=datetime.now())
 df = data.dropna()
 
-bullish = 0 #uptrend
-bearish = 0 #downtrend
-trend_strength = 0 #weight value
-buy = True
 
-if obv_calc(df, period=7) and adl_calc(df, period=7) > 0:
-    bullish = bullish + 1
-if obv_calc(df, period=7) and adl_calc(df, period=7) < 0: 
-    bearish = bearish + 1
-if obv_calc(df, period=7) > 0 and adl_calc(df, period=7) < 0:
-    bullish = bullish + 1
-if obv_calc(df, period=7) < 0 and adl_calc(df, period=7) > 0:
-    bearish = bearish + 1
+def trade_decision(dataframe):    
+    obv = obv_calc(df, period=7)
+    adl = adl_calc(df, period=14)
+    adx = adx_calc(df, period=14)
+    bull_bear1, macd_gen_val = macd_calc(df, num_macds=18)
+    rsi = rsi_calc(df, period=14)
+    bull_bear2, reading = stoch_oscillator_calc(df, period=14, period_num=6)
 
-if 0 <= adx_calc(df, period=14) < 25:
-    trend_strength = 0
-if 25 <= adx_calc(df, period=14) < 50:
-    trend_strength = 1
-if 50 <= adx_calc(df, period=14) < 75:
-    trend_strength = 2
-if 75 <= adx_calc(df, period=14) < 100:
-    trend_strength = 3
+    bullish = 0 #uptrend
+    bearish = 0 #downtrend
 
-bull_bear, macd_gen_val = macd_calc(df, num_macds=18)
+    if obv and adl > 0:
+        bullish += 1
+    if obv and adl < 0: 
+        bearish += 1
+    if obv > 0 and adl < 0:
+        bullish += 1
+    if obv < 0 and adl > 0:
+        bearish += 1
 
-if bull_bear == "bullish":
-    bullish = bullish + 1
-if bull_bear == "bearish":
-    bearish = bearish + 1
+    if adx > 25:
+        if adx > 50:
+            if adx > 70:
+                bullish += 2
+            else:
+                bullish += 1
+        else:
+            bearish += 1
+
+    if bull_bear1 == "bullish":
+        bullish += 1
+    if bull_bear1 == "bearish":
+        bearish += 1
+        
+    if macd_gen_val > 0:
+        bullish += 1
+    if macd_gen_val < 0:
+        bearish += 1
+
+    if rsi < 30:
+        bullish += 1
+    if rsi > 70:
+        bearish += 1
+
+    if bull_bear2 == "bullish":
+        bullish += 1
+    if bull_bear2 == "bearish":
+        bearish += 1
+
+    if reading > 80:
+        bullish += 1
+    if reading < 20:
+        bearish += 1
+
+    if bullish > bearish:
+        return "Buy"
+    elif bullish < bearish:
+        return "Sell"
+    else:
+        return "Hold"
     
-if macd_gen_val > 0:
-    bullish = bullish + 1
-if macd_gen_val < 0:
-    bearish = bearish + 1
-
-if rsi_calc(df, period=7) < 30:
-    bullish = bullish + 1
-if rsi_calc(df, period=7) > 70:
-    bearish = bearish + 1
-
-if bullish > bearish:
-    buy = True
-else:
-    buy = False
-
-print(bullish, bearish, buy)
+print(trade_decision(df))
