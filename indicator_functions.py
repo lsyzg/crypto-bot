@@ -1,4 +1,3 @@
-import requests, json
 import numpy as np
 import yfinance as yf
 import pandas as pd

@@ -6,7 +6,7 @@ data = yf.download("ETH-USD", start="2017-11-09", end=datetime.now())
 df = data.dropna()
 
 
-def trade_decision(dataframe):    
+def trade_decision(df):    
     obv = obv_calc(df, period=7)
     adl = adl_calc(df, period=14)
     adx = adx_calc(df, period=14)
